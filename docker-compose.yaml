@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  monolith:
+    container_name: doc_server
+    hostname: doc_server
+    image: doc-server-monolith
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - '8080:8080'
+    env_file:
+      - docker/.env
+    depends_on:
+      - postgres
+    command: [ "/doc_server/monolith" ]
+    profiles: [ monolith ]
+
+  postgres:
+    container_name: postgres
+    hostname: postgres
+    build:
+      context: .
+      dockerfile: docker/pg/Dockerfile
+    restart: always
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'pgdata:/var/lib/postgresql/data'
+volumes:
+  pgdata:

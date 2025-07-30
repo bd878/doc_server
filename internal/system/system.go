@@ -81,7 +81,7 @@ func (s *System) Mux() *http.ServeMux {
 
 func (s *System) WaitForWeb(ctx context.Context) error {
 	webServer := &http.Server{
-		Addr: s.cfg.Web.Address(),
+		Addr:    s.cfg.Web.Address(),
 		Handler: s.mux,
 	}
 
