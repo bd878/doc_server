@@ -32,5 +32,5 @@ func InitConfig() (cfg AppConfig, err error) {
 }
 
 func (c WebConfig) Address() string {
-	return fmt.Sprintf("%s%s", c.Host, c.Port)
+	return fmt.Sprintf("%s:%s", c.Host, c.Port)
 }

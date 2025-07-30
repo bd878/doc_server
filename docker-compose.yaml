@@ -1,21 +1,19 @@
 version: "3.8"
 
 services:
-  monolith:
+  doc_server:
     container_name: doc_server
     hostname: doc_server
-    image: doc-server-monolith
+    image: doc_server
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/app/Dockerfile
     ports:
       - '8080:8080'
     env_file:
       - docker/.env
     depends_on:
       - postgres
-    command: [ "/doc_server/monolith" ]
-    profiles: [ monolith ]
 
   postgres:
     container_name: postgres
@@ -23,6 +21,8 @@ services:
     build:
       context: .
       dockerfile: docker/pg/Dockerfile
+    environment:
+      POSTGRES_PASSWORD: abcde12345
     restart: always
     ports:
       - '5432:5432'
