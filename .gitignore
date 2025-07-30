@@ -1,0 +1,11 @@
+*
+!*/
+!*.*
+*.db
+*.swp
+*.swo
+*.swn
+*.patch
+*.token
+.env
+node_modules/*
