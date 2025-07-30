@@ -24,7 +24,10 @@ func main() {
 }
 
 func run() (err error) {
-	cfg := config.LoadConfig(os.Args[1])
+	cfg, err := config.InitConfig()
+	if err != nil {
+		return err
+	}
 
 	s, err := system.NewSystem(cfg)
 	if err != nil {

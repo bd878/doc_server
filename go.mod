@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/jackc/pgx/v5 v5.7.5
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/rs/zerolog v1.34.0
 	golang.org/x/sync v0.16.0
 )

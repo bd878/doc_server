@@ -1,20 +1,15 @@
 package config
 
 import (
-	"errors"
 	"time"
 	"fmt"
-	"encoding/json"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type (
 	WebConfig struct {
-		Host string   `json:"host"`
-		Port string   `json:"port"`
-	}
-
-	Duration struct {
-		time.Duration
+		Host string   `default:"0.0.0.0"`
+		Port string   `default:"8080"`
 	}
 
 	PGConfig struct {
@@ -22,39 +17,20 @@ type (
 	}
 
 	AppConfig struct {
-		Environment       string          `json:"environment"`
-		LogLevel         string          `json:"log_level"`
-		PG               PGConfig        `json:"pg"`
-		Web              WebConfig       `json:"web"`
-		ShutdownTimeout  Duration        `json:"shutdown_timeout"`
+		Environment      string
+		LogLevel         string          `envconfig:"LOG_LEVEL" default:"DEBUG"`
+		PG               PGConfig
+		Web              WebConfig
+		ShutdownTimeout  time.Duration   `envconfig:"SHUTDOWN_TIMEOUT" default:"30s"`
 	}
 )
 
+func InitConfig() (cfg AppConfig, err error) {
+	err = envconfig.Process("", &cfg)
+
+	return
+}
+
 func (c WebConfig) Address() string {
 	return fmt.Sprintf("%s%s", c.Host, c.Port)
-}
-
-func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.String())
-}
-
-func (d *Duration) UnmarshalJSON(b []byte) (err error) {
-	var v interface{}
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-
-	switch value := v.(type) {
-	case float64:
-		d.Duration = time.Duration(value)
-		return nil
-	case string:
-		d.Duration, err = time.ParseDuration(value)
-		if err != nil {
-			return err
-		}
-		return nil
-	default:
-		return errors.New("invalid duration")
-	}
 }
