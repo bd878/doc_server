@@ -7,6 +7,8 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	"github.com/bd878/doc_server/users"
+	"github.com/bd878/doc_server/docs"
 	"github.com/bd878/doc_server/config"
 	"github.com/bd878/doc_server/internal/system"
 )
@@ -37,6 +39,8 @@ func run() (err error) {
 	m := &monolith{
 		System: s,
 		modules: []system.Module{
+			&users.Module{},
+			&docs.Module{},
 		},
 	}
 
