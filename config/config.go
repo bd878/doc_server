@@ -21,6 +21,7 @@ type (
 		LogLevel         string          `envconfig:"LOG_LEVEL" default:"DEBUG"`
 		PG               PGConfig
 		Web              WebConfig
+		AdminToken       string          `envconfig:"ADMIN_TOKEN"`
 		ShutdownTimeout  time.Duration   `envconfig:"SHUTDOWN_TIMEOUT" default:"30s"`
 	}
 )

@@ -13,7 +13,7 @@ type Module struct {
 
 func (Module) Startup(ctx context.Context, mono system.Service) (err error) {
 	users := repository.New("users.users", mono.DB())
-	ctrl := controller.New(users)
+	ctrl := controller.New(users, mono.Config().AdminToken)
 
 	handlers.RegisterHandlers(mono.Mux(), ctrl)
 

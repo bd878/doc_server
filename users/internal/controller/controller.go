@@ -12,14 +12,15 @@ type Repository interface {
 }
 
 type Controller struct {
-	repo Repository
+	repo  Repository
+	token string
 }
 
-func New(repo Repository) *Controller {
-	return &Controller{repo}
+func New(repo Repository, token string) *Controller {
+	return &Controller{repo, token}
 }
 
-func (r Controller) Register(ctx context.Context, login, password string) (err error) {
+func (r Controller) Register(ctx context.Context, adminToken, login, password string) (err error) {
 	return nil
 }
 
