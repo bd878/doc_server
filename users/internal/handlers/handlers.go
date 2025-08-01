@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"errors"
 	"context"
 	"unicode"
@@ -296,5 +297,34 @@ func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handlers) Logout(w http.ResponseWriter, req *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	token := req.PathValue("token")
+
+	err := h.ctrl.Logout(req.Context(), token)
+	if err != nil {
+		h.logger.Error().Err(err)
+
+		if errors.Is(err, users.ErrNoUser) {
+			json.NewEncoder(w).Encode(server.ServerResponse{
+				Error: &server.ErrorCode{
+					Code: server.CodeNoUser,
+					Text: "no user",
+				},
+			})
+			return
+		}
+
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: users.CodeLogoutFailed,
+				Text: "failed to logout",
+			},
+		})
+		return
+	}
+
+	response := json.RawMessage([]byte(fmt.Sprintf(`{"%s": true}`, token)))
+	json.NewEncoder(w).Encode(server.ServerResponse{
+		Response: response,
+	})
 }

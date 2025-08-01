@@ -9,6 +9,7 @@ var (
 
 	CodeRegisterFailed     int = 111
 	CodeAuthFailed         int = 112
+	CodeLogoutFailed       int = 113
 
 	CodeNoLogin            int = 121
 	CodeNoPassword         int = 122
