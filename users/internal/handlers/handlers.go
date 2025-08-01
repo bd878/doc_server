@@ -106,7 +106,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
 			Error: &server.ErrorCode{
-				Code: users.CodeNoToken,
+				Code: server.CodeNoToken,
 				Text: "token required",
 			},
 		})

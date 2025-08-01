@@ -11,22 +11,44 @@ type (
 	Meta struct {
 		ID        string            `json:"id"`
 		Name      string            `json:"name"`
+		Mime      string            `json:"mime"`
 		File      bool              `json:"file"`
 		Public    bool              `json:"public"`
-		Token    *string            `json:"token,omitempty"`
-		Mime      string            `json:"mime"`
+		Created   string            `json:"created"`
 		Grant     []string          `json:"grant"`
 	}
 
 	File struct {
-		JSON   json.RawMessage   `json:"json"`
-		File   []byte            `json:"file"`
+		JSON   json.RawMessage      `json:"json"`
+		File   []byte               `json:"file"`
+	}
+
+	SaveMeta struct {
+		ID        string            `json:"id"`
+		Name      string            `json:"name"`
+		File      bool              `json:"file"`
+		Public    bool              `json:"public"`
+		Token     string            `json:"token"`
+		Mime      string            `json:"mime"`
+		Grant     []string          `json:"grant"`
+	}
+
+	ListMeta struct {
+		Token     string            `json:"token"`
+		Login     string            `json:"login"`
+		Key       string            `json:"key"`
+		Value     string            `json:"value"`
+		Limit     int               `json:"limit"`
 	}
 
 	DeleteResponse map[string]interface{}
 
+	ListResponse struct {
+		Docs    []*Meta             `json:"docs"`
+	}
+
 	SaveResponse struct {
-		JSON    json.RawMessage   `json:"json,omitempty"`
-		File    string            `json:"file"`
+		JSON    json.RawMessage     `json:"json,omitempty"`
+		File    string              `json:"file"`
 	}
 )

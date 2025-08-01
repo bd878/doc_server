@@ -22,9 +22,9 @@ func (Module) Startup(ctx context.Context, mono system.Service) (err error) {
 	gateway := users.NewGateway(conn)
 
 	docs := repository.New("docs.meta", "docs.files", "docs.permissions", mono.DB())
-	ctrl := controller.New(docs, gateway)
+	ctrl := controller.New(docs)
 
-	handlers.RegisterHandlers(mono.Mux(), ctrl, mono.Logger())
+	handlers.RegisterHandlers(mono.Mux(), ctrl, gateway, mono.Logger())
 
 	return nil
 }

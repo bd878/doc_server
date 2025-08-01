@@ -13,6 +13,5 @@ var (
 
 	CodeNoLogin            int = 121
 	CodeNoPassword         int = 122
-	CodeNoToken            int = 123
 	CodeWrongToken         int = 124
 )

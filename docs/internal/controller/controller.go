@@ -13,28 +13,23 @@ type Repository interface {
 	Delete(ctx context.Context, id int) (err error)
 }
 
-type UsersGateway interface {
-	Auth(ctx context.Context, token string) (ok bool, err error)
-}
-
 type Controller struct {
 	repo     Repository
-	gateway  UsersGateway
 }
 
-func New(repo Repository, gateway UsersGateway) *Controller {
-	return &Controller{repo, gateway}
+func New(repo Repository) *Controller {
+	return &Controller{repo}
 }
 
-func (c Controller) Save(ctx context.Context, f multipart.File, meta docs.Meta) (err error) {
+func (c Controller) Save(ctx context.Context, f multipart.File, meta *docs.Meta) (err error) {
 	return
 }
 
-func (c Controller) List(ctx context.Context, key, value string, limit int) (docs []*docs.Doc, isLastPage bool, err error) {
+func (c Controller) List(ctx context.Context, key, value string, limit int) (docs []*docs.Meta, isLastPage bool, err error) {
 	return
 }
 
-func (c Controller) Get(ctx context.Context, id int) (doc *docs.Doc, err error) {
+func (c Controller) Get(ctx context.Context, id int) (doc *docs.Meta, err error) {
 	return
 }
 
