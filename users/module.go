@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"github.com/bd878/doc_server/internal/system"
+	"github.com/bd878/doc_server/users/internal/grpc"
 	"github.com/bd878/doc_server/users/internal/controller"
 	"github.com/bd878/doc_server/users/internal/handlers"
 	"github.com/bd878/doc_server/users/internal/repository"
@@ -16,6 +17,7 @@ func (Module) Startup(ctx context.Context, mono system.Service) (err error) {
 	ctrl := controller.New(users, mono.Config().AdminToken)
 
 	handlers.RegisterHandlers(mono.Mux(), ctrl, mono.Logger())
+	grpc.RegisterServer(ctrl, mono.RPC())
 
 	return nil
 }

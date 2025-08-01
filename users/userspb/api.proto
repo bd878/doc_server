@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package userspb;
+
+option go_package = "github.com/bd878/doc_server/users/userspb";
+
+service UsersService {
+	rpc Auth(AuthRequest) returns (AuthResponse) {};
+}
+
+message AuthRequest {
+	string token = 1;
+}
+
+message AuthResponse {
+	bool   ok = 1;
+}

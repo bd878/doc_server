@@ -14,7 +14,7 @@ import (
 
 type Controller interface {
 	Register(ctx context.Context, adminToken, login, password string) (err error)
-	Auth(ctx context.Context, login, password string) (user *users.User, err error)
+	Login(ctx context.Context, login, password string) (user *users.User, err error)
 	Logout(ctx context.Context, token string) (err error)
 }
 
@@ -247,7 +247,7 @@ func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, err := h.ctrl.Auth(req.Context(), login, password)
+	user, err := h.ctrl.Login(req.Context(), login, password)
 	if err != nil {
 		h.logger.Error().Err(err)
 

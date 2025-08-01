@@ -12,6 +12,11 @@ type (
 		Port string   `default:"8080"`
 	}
 
+	RPCConfig struct {
+		Host string   `default:"0.0.0.0"`
+		Port string   `default:"8085"`
+	}
+
 	PGConfig struct {
 		Conn string
 	}
@@ -21,6 +26,7 @@ type (
 		LogLevel         string          `envconfig:"LOG_LEVEL" default:"DEBUG"`
 		PG               PGConfig
 		Web              WebConfig
+		Rpc              RPCConfig
 		AdminToken       string          `envconfig:"ADMIN_TOKEN"`
 		ShutdownTimeout  time.Duration   `envconfig:"SHUTDOWN_TIMEOUT" default:"30s"`
 	}
@@ -33,5 +39,9 @@ func InitConfig() (cfg AppConfig, err error) {
 }
 
 func (c WebConfig) Address() string {
+	return fmt.Sprintf("%s:%s", c.Host, c.Port)
+}
+
+func (c RPCConfig) Address() string {
 	return fmt.Sprintf("%s:%s", c.Host, c.Port)
 }

@@ -27,7 +27,11 @@ func (r Controller) Register(ctx context.Context, adminToken, login, password st
 	return nil
 }
 
-func (r Controller) Auth(ctx context.Context, login, password string) (user *model.User, err error) {
+func (r Controller) Auth(ctx context.Context, token string) (user *model.User, err error) {
+	return
+}
+
+func (r Controller) Login(ctx context.Context, login, password string) (user *model.User, err error) {
 	return nil, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
 
 	"github.com/bd878/doc_server/config"
 	"github.com/bd878/doc_server/internal/waiter"
@@ -13,6 +14,7 @@ import (
 
 type Service interface {
 	DB()      *sql.DB
+	RPC()     *grpc.Server
 	Mux()     *http.ServeMux
 	Config()   config.AppConfig
 	Waiter()  waiter.Waiter
