@@ -5,9 +5,13 @@ var (
 	CodePasswordUpperLower int = 102
 	CodePasswordOneNumber  int = 103
 	CodePasswordOneSpecial int = 104
-
 	CodeLoginTooShort      int = 105
 
-	CodeWrongToken         int = 111
-	CodeRegisterFailed     int = 112
+	CodeRegisterFailed     int = 111
+	CodeAuthFailed         int = 112
+
+	CodeNoLogin            int = 121
+	CodeNoPassword         int = 122
+	CodeNoToken            int = 123
+	CodeWrongToken         int = 124
 )

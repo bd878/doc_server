@@ -79,6 +79,39 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 
 	login, password, token = req.PostFormValue("login"), req.PostFormValue("pswd"), req.PostFormValue("token")
 
+	if login == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: users.CodeNoLogin,
+				Text: "login required",
+			},
+		})
+		return
+	}
+
+	if password == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: users.CodeNoPassword,
+				Text: "password required",
+			},
+		})
+		return
+	}
+
+	if token == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: users.CodeNoToken,
+				Text: "token required",
+			},
+		})
+		return
+	}
+
 	eightOrMore, twoLetters, oneNumber, oneSpecial := verifyPassword(password)
 	if !eightOrMore {
 		w.WriteHeader(http.StatusBadRequest)
@@ -173,6 +206,93 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
+	var login, password string
+
+	err := req.ParseMultipartForm(1024 /* 1 KB */)
+	if err != nil {
+		h.logger.Error().Err(err)
+
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeRequestTooLarge,
+				Text: "request too large",
+			},
+		})
+		return
+	}
+
+	login, password = req.PostFormValue("login"), req.PostFormValue("pswd")
+
+	if login == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: users.CodeNoLogin,
+				Text: "login required",
+			},
+		})
+		return
+	}
+
+	if password == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: users.CodeNoPassword,
+				Text: "password required",
+			},
+		})
+		return
+	}
+
+	user, err := h.ctrl.Auth(req.Context(), login, password)
+	if err != nil {
+		h.logger.Error().Err(err)
+
+		switch err {
+		case users.ErrNoUser:
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(server.ServerResponse{
+				Error: &server.ErrorCode{
+					Code: server.CodeNoUser,
+					Text: "no user",
+				},
+			})
+			return
+		case users.ErrWrongPassword:
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(server.ServerResponse{
+				Error: &server.ErrorCode{
+					Code: server.CodeWrongPassword,
+					Text: "wrong password",
+				},
+			})
+			return
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(server.ServerResponse{
+				Error: &server.ErrorCode{
+					Code: users.CodeAuthFailed,
+					Text: "auth failed",
+				},
+			})
+			return
+		}
+	}
+
+	response, err := json.Marshal(users.AuthResponse{
+		Token: user.Token,
+	})
+	if err != nil {
+		h.logger.Error().Err(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(server.ServerResponse{
+		Response: json.RawMessage(response),
+	})
 }
 
 func (h handlers) Logout(w http.ResponseWriter, req *http.Request) {

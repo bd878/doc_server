@@ -6,7 +6,7 @@ type (
 	}
 
 	AuthResponse struct {
-		Auth    string    `json:"token"`
+		Token   string    `json:"token"`
 	}
 
 	User struct {
