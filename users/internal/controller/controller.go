@@ -21,6 +21,9 @@ func New(repo Repository, token string) *Controller {
 }
 
 func (r Controller) Register(ctx context.Context, adminToken, login, password string) (err error) {
+	if adminToken != r.token {
+		return model.ErrWrongToken
+	}
 	return nil
 }
 

@@ -7,7 +7,7 @@ type (
 		Password  string     `json:"pswd"`
 	}
 
-	LoginResponse struct {
+	RegisterResponse struct {
 		Login   string    `json:"login"`
 	}
 

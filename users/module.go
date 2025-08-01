@@ -15,7 +15,7 @@ func (Module) Startup(ctx context.Context, mono system.Service) (err error) {
 	users := repository.New("users.users", mono.DB())
 	ctrl := controller.New(users, mono.Config().AdminToken)
 
-	handlers.RegisterHandlers(mono.Mux(), ctrl)
+	handlers.RegisterHandlers(mono.Mux(), ctrl, mono.Logger())
 
 	return nil
 }
