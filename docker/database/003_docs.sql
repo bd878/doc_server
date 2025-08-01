@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS docs.files
 (
 	file_id int UNIQUE NOT NULL,
 	file bytea NOT NULL,
+	json bytea DEFAULT NULL,
 	PRIMARY KEY(id)
 );
 

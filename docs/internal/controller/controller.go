@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"mime/multipart"
 	docs "github.com/bd878/doc_server/docs/pkg/model"
 )
 
@@ -25,7 +26,7 @@ func New(repo Repository, gateway UsersGateway) *Controller {
 	return &Controller{repo, gateway}
 }
 
-func (c Controller) Save(ctx context.Context, doc *docs.Doc) (err error) {
+func (c Controller) Save(ctx context.Context, f multipart.File, meta docs.Meta) (err error) {
 	return
 }
 
