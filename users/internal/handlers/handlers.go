@@ -54,6 +54,13 @@ func verifyPassword(password string) (eightOrMore, twoLetters, oneNumber, oneSpe
 	return
 }
 
+func verifyLogin(login string) (eightOrMore bool) {
+	if len(login) >= 8 {
+		eightOrMore = true
+	}
+	return
+}
+
 func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 	data, err := io.ReadAll(req.Body)
 	defer req.Body.Close()
@@ -105,6 +112,18 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 			Error: &server.ErrorCode{
 				Code: users.CodePasswordOneSpecial,
 				Text: "password must have at least one special symbol",
+			},
+		})
+		return
+	}
+
+	eightOrMore = verifyLogin(body.Login)
+	if !eightOrMore {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: users.CodeLoginTooShort,
+				Text: "login is less than 8 symbols",
 			},
 		})
 		return
