@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"io"
 	"errors"
 	"context"
 	"unicode"
@@ -62,20 +61,25 @@ func verifyLogin(login string) (eightOrMore bool) {
 }
 
 func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
-	data, err := io.ReadAll(req.Body)
-	defer req.Body.Close()
+	var login, password, token string
+
+	err := req.ParseMultipartForm(1024 /* 1 KB */)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+		h.logger.Error().Err(err)
 
-	var body users.Register
-	if err := json.Unmarshal(data, &body); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeRequestTooLarge,
+				Text: "request too large",
+			},
+		})
 		return
 	}
 
-	eightOrMore, twoLetters, oneNumber, oneSpecial := verifyPassword(body.Password)
+	login, password, token = req.PostFormValue("login"), req.PostFormValue("pswd"), req.PostFormValue("token")
+
+	eightOrMore, twoLetters, oneNumber, oneSpecial := verifyPassword(password)
 	if !eightOrMore {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
@@ -117,7 +121,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	eightOrMore = verifyLogin(body.Login)
+	eightOrMore = verifyLogin(login)
 	if !eightOrMore {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
@@ -129,7 +133,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = h.ctrl.Register(req.Context(), body.Token, body.Login, body.Password)
+	err = h.ctrl.Register(req.Context(), token, login, password)
 	if err != nil {
 		h.logger.Error().Err(err)
 
@@ -155,7 +159,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 	}
 
 	response, err := json.Marshal(users.RegisterResponse{
-		Login: body.Login,
+		Login: login,
 	})
 	if err != nil {
 		h.logger.Error().Err(err)
@@ -169,7 +173,6 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
 }
 
 func (h handlers) Logout(w http.ResponseWriter, req *http.Request) {

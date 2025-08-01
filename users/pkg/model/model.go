@@ -1,12 +1,6 @@
 package model
 
 type (
-	Register struct {
-		Token     string     `json:"token"`
-		Login     string     `json:"login"`
-		Password  string     `json:"pswd"`
-	}
-
 	RegisterResponse struct {
 		Login   string    `json:"login"`
 	}
