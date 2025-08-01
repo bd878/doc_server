@@ -253,6 +253,36 @@ func (h handlers) ListHead(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
+	err := req.ParseForm()
+	if err != nil {
+		h.logger.Error().Err(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	token := req.FormValue("token")
+	if token == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeNoToken,
+				Text: "no token",
+			},
+		})
+		return
+	}
+
+	ok, err := h.gateway.Auth(req.Context(), token)
+	if err != nil {
+		h.logger.Error().Err(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 }
 
 func (h handlers) GetHead(w http.ResponseWriter, req *http.Request) {
