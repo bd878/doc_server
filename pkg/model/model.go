@@ -9,7 +9,7 @@ type (
 	}
 
 	ServerResponse struct {
-		Error      ErrorCode         `json:"error,omitempty"`
+		Error     *ErrorCode         `json:"error,omitempty"`
 		Response   json.RawMessage   `json:"response,omitempty"`
 		Data       json.RawMessage   `json:"data,omitempty"`
 	}

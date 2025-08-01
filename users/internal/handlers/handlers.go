@@ -72,9 +72,9 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 	if !eightOrMore {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
-			Error: server.ErrorCode{
+			Error: &server.ErrorCode{
 				Code: users.CodePasswordTooShort,
-				Text: "< 8 symbols",
+				Text: "password is less than 8 symbols",
 			},
 		})
 		return
@@ -82,7 +82,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 	if !twoLetters {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
-			Error: server.ErrorCode{
+			Error: &server.ErrorCode{
 				Code: users.CodePasswordUpperLower,
 				Text: "password must have upper und lower letter",
 			},
@@ -92,7 +92,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 	if !oneNumber {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
-			Error: server.ErrorCode{
+			Error: &server.ErrorCode{
 				Code: users.CodePasswordOneNumber,
 				Text: "password must have at least one number",
 			},
@@ -102,7 +102,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 	if !oneSpecial {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
-			Error: server.ErrorCode{
+			Error: &server.ErrorCode{
 				Code: users.CodePasswordOneSpecial,
 				Text: "password must have at least one special symbol",
 			},
@@ -117,7 +117,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 		if errors.Is(err, users.ErrWrongToken) {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(server.ServerResponse{
-				Error: server.ErrorCode{
+				Error: &server.ErrorCode{
 					Code: users.CodeWrongToken,
 					Text: "wrong admin token",
 				},
@@ -127,7 +127,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(server.ServerResponse{
-			Error: server.ErrorCode{
+			Error: &server.ErrorCode{
 				Code: users.CodeRegisterFailed,
 				Text: "failed to register user",
 			},
