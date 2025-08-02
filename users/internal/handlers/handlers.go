@@ -28,7 +28,7 @@ func RegisterHandlers(mux *http.ServeMux, ctrl Controller, logger zerolog.Logger
 
 	mux.HandleFunc("POST /api/register", h.Register)
 	mux.HandleFunc("POST /api/auth", h.Auth)
-	mux.HandleFunc("DELETE /api/auth/:token", h.Logout)
+	mux.HandleFunc("DELETE /api/auth/{token}", h.Logout)
 }
 
 func verifyPassword(password string) (eightOrMore, twoLetters, oneNumber, oneSpecial bool) {
@@ -71,8 +71,8 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
 			Error: &server.ErrorCode{
-				Code: server.CodeRequestTooLarge,
-				Text: "request too large",
+				Code: server.CodeNoForm,
+				Text: "failed to parse form",
 			},
 		})
 		return
@@ -216,8 +216,8 @@ func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
 			Error: &server.ErrorCode{
-				Code: server.CodeRequestTooLarge,
-				Text: "request too large",
+				Code: server.CodeNoForm,
+				Text: "failed to parse form",
 			},
 		})
 		return

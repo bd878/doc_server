@@ -38,9 +38,9 @@ func RegisterHandlers(mux *http.ServeMux, ctrl Controller, gateway UsersGateway,
 	mux.HandleFunc("POST    /api/docs", h.Save)
 	mux.HandleFunc("GET     /api/docs", h.List)
 	mux.HandleFunc("HEAD    /api/docs", h.ListHead)
-	mux.HandleFunc("GET     /api/docs/:id", h.Get)
-	mux.HandleFunc("HEAD    /api/docs/:id", h.GetHead)
-	mux.HandleFunc("DELETE  /api/docs/:id", h.Delete)
+	mux.HandleFunc("GET     /api/docs/{id}", h.Get)
+	mux.HandleFunc("HEAD    /api/docs/{id}", h.GetHead)
+	mux.HandleFunc("DELETE  /api/docs/{id}", h.Delete)
 }
 
 func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
@@ -53,8 +53,8 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
 			Error: &server.ErrorCode{
-				Code: server.CodeRequestTooLarge,
-				Text: "request too large",
+				Code: server.CodeNoForm,
+				Text: "failed to parse form",
 			},
 		})
 		return

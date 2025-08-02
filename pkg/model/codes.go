@@ -5,4 +5,5 @@ var (
 	CodeNoUser             int = 12
 	CodeWrongPassword      int = 13
 	CodeNoToken            int = 14
+	CodeNoForm             int = 15
 )
