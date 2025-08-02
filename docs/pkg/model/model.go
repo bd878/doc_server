@@ -3,11 +3,6 @@ package model
 import "encoding/json"
 
 type (
-	Doc struct {
-		Meta   Meta
-		File   File
-	}
-
 	Meta struct {
 		ID        string            `json:"id"`
 		Name      string            `json:"name"`
@@ -16,11 +11,6 @@ type (
 		Public    bool              `json:"public"`
 		Created   string            `json:"created"`
 		Grant     []string          `json:"grant"`
-	}
-
-	File struct {
-		JSON   json.RawMessage      `json:"json"`
-		File   []byte               `json:"file"`
 	}
 
 	SaveMeta struct {
@@ -49,6 +39,6 @@ type (
 
 	SaveResponse struct {
 		JSON    json.RawMessage     `json:"json,omitempty"`
-		File    string              `json:"file"`
+		File    string              `json:"file,omitempty"`
 	}
 )

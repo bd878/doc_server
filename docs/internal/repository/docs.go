@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"io"
+	"encoding/json"
+	"mime/multipart"
 	docs "github.com/bd878/doc_server/docs/pkg/model"
 )
 
@@ -22,18 +25,30 @@ func New(tableName, metaTableName, permissionsTableName string, pool *sql.DB) *R
 	}
 }
 
-func (r *Repository) Save(ctx context.Context, doc *docs.Doc) (err error) {
+func (r *Repository) SaveFile(ctx context.Context, f multipart.File, meta *docs.Meta) (err error) {
 	return
 }
 
-func (r *Repository) List(ctx context.Context, key, value string, limit int) (docs []*docs.Doc, isLastPage bool, err error) {
+func (r *Repository) SaveJSON(ctx context.Context, data []byte, meta *docs.Meta) (err error) {
 	return
 }
 
-func (r *Repository) Get(ctx context.Context, id int) (doc *docs.Doc, err error) {
+func (r *Repository) List(ctx context.Context, key, value string, limit int) (docs []*docs.Meta, isLastPage bool, err error) {
 	return
 }
 
-func (r *Repository) Delete(ctx context.Context, id int) (err error) {
+func (r *Repository) GetMeta(ctx context.Context, id string) (meta *docs.Meta, err error) {
+	return
+}
+
+func (r *Repository) ReadFile(ctx context.Context, id string) (file io.Reader, err error) {
+	return
+}
+
+func (r *Repository) ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error) {
+	return
+}
+
+func (r *Repository) Delete(ctx context.Context, id string) (err error) {
 	return
 }

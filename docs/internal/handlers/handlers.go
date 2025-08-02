@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -16,10 +17,13 @@ type UsersGateway interface {
 }
 
 type Controller interface {
-	Save(ctx context.Context, f multipart.File, meta *docs.Meta) (err error)
 	List(ctx context.Context, key, value string, limit int) (docs []*docs.Meta, isLastPage bool, err error)
-	Get(ctx context.Context, id int) (doc *docs.Meta, err error)
-	Delete(ctx context.Context, id int) (err error)
+	SaveFile(ctx context.Context, f multipart.File, meta *docs.Meta) (err error)
+	SaveJSON(ctx context.Context, json []byte, meta *docs.Meta) (err error)
+	GetMeta(ctx context.Context, id string) (doc *docs.Meta, err error)
+	ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error)
+	ReadFileStream(ctx context.Context, id string) (file io.Reader, err error)
+	Delete(ctx context.Context, id string) (err error)
 }
 
 type handlers struct {
@@ -98,53 +102,85 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	jsonData := req.PostFormValue("jsonData")
-
-	f, _, err := req.FormFile("file")
-	if err != nil {
-		h.logger.Error().Err(err)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(server.ServerResponse{
-			Error: &server.ErrorCode{
-				Code: docs.CodeNoFile,
-				Text: "file required",
-			},
-		})
-		return
-	}
-
-	err = h.ctrl.Save(req.Context(), f, &docs.Meta{
-		Name:     meta.Name,
-		File:     meta.File,
-		Mime:     meta.Mime,
-		Public:   meta.Public,
-		Grant:    meta.Grant,
-	})
-	if err != nil {
-		h.logger.Error().Err(err)
-		switch err {
-		case server.ErrUnauthorized:
-			w.WriteHeader(http.StatusUnauthorized)
+	if meta.File {
+		f, _, err := req.FormFile("file")
+		if err != nil {
+			h.logger.Error().Err(err)
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(server.ServerResponse{
+				Error: &server.ErrorCode{
+					Code: docs.CodeNoFile,
+					Text: "file required",
+				},
+			})
 			return
-		default:
+		}
+
+		err = h.ctrl.SaveFile(req.Context(), f, &docs.Meta{
+			Name:     meta.Name,
+			File:     meta.File,
+			Mime:     meta.Mime,
+			Public:   meta.Public,
+			Grant:    meta.Grant,
+		})
+		if err != nil {
+			h.logger.Error().Err(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-	}
 
-	response, err := json.Marshal(docs.SaveResponse{
-		JSON: json.RawMessage([]byte(jsonData)),
-		File: meta.Name,
-	})
-	if err != nil {
-		h.logger.Error().Err(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+		response, err := json.Marshal(docs.SaveResponse{
+			File: meta.Name,
+		})
+		if err != nil {
+			h.logger.Error().Err(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	json.NewEncoder(w).Encode(server.ServerResponse{
-		Data: json.RawMessage(response),
-	})
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Data: json.RawMessage(response),
+		})
+	} else {
+		jsonData := req.PostFormValue("jsonData")
+
+		if jsonData == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(server.ServerResponse{
+				Error: &server.ErrorCode{
+					Code: docs.CodeNoJSON,
+					Text: "json required",
+				},
+			})
+			return
+		}
+
+		err = h.ctrl.SaveJSON(req.Context(), []byte(jsonData), &docs.Meta{
+			Name:     meta.Name,
+			File:     meta.File,
+			Mime:     meta.Mime,
+			Public:   meta.Public,
+			Grant:    meta.Grant,
+		})
+		if err != nil {
+			h.logger.Error().Err(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		response, err := json.Marshal(docs.SaveResponse{
+			JSON: json.RawMessage([]byte(jsonData)),
+		})
+		if err != nil {
+			h.logger.Error().Err(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Data: json.RawMessage(response),
+		})
+	}
 }
 
 func (h handlers) List(w http.ResponseWriter, req *http.Request) {
@@ -281,6 +317,55 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 
 	if !ok {
 		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	id := req.PathValue("id")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	meta, err := h.ctrl.GetMeta(req.Context(), id)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: docs.CodeDocNotFound,
+				Text: "document not found",
+			},
+		})
+		return
+	}
+
+	if meta.File {
+		stream, err := h.ctrl.ReadFileStream(req.Context(), id)
+		if err != nil {
+			h.logger.Error().Err(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Disposition", "attachment; " + "filename*=UTF-8''" + meta.Name)
+		w.Header().Set("Content-Type", meta.Mime)
+
+		_, err = io.Copy(w, stream)
+		if err != nil {
+			h.logger.Error().Err(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	} else {
+		jsonData, err := h.ctrl.ReadJSON(req.Context(), id)
+		if err != nil {
+			h.logger.Error().Err(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Data: jsonData,
+		})
 		return
 	}
 }
