@@ -17,8 +17,8 @@ type Service interface {
 	RPC()     *grpc.Server
 	Mux()     *http.ServeMux
 	Config()   config.AppConfig
-	Waiter()  waiter.Waiter
-	Logger()  zerolog.Logger
+	Waiter()   waiter.Waiter
+	Logger()   zerolog.Logger
 }
 
 type Module interface {

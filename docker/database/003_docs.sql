@@ -3,7 +3,7 @@ CREATE SCHEMA IF NOT EXISTS docs;
 
 CREATE TABLE IF NOT EXISTS docs.meta
 (
-	id int UNIQUE NOT NULL,
+	id varchar(256) UNIQUE NOT NULL,
 	name VARCHAR(256) NOT NULL,
 	file bool NOT NULL DEFAULT true,
 	public bool NOT NULL DEFAULT false,
@@ -18,7 +18,7 @@ CREATE TRIGGER updated_at_docs_trgr BEFORE UPDATE ON docs.meta FOR EACH ROW EXEC
 
 CREATE TABLE IF NOT EXISTS docs.files
 (
-	file_id int UNIQUE NOT NULL,
+	file_id varchar(256) UNIQUE NOT NULL,
 	file bytea NOT NULL,
 	json bytea DEFAULT NULL,
 	PRIMARY KEY(id)
@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS docs.files
 
 CREATE TABLE IF NOT EXISTS docs.permissions
 (
-	file_id int NOT NULL,
-	user_id int NOT NULL
+	file_id varchar(256) NOT NULL,
+	user_login varchar(256) NOT NULL
 );
 
 GRANT USAGE ON SCHEMA docs TO doc_server_admin;
