@@ -66,7 +66,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 
 	err := req.ParseMultipartForm(1024 /* 1 KB */)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to parse form")
 
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
@@ -169,7 +169,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 
 	err = h.ctrl.Register(req.Context(), token, login, password)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to register user")
 
 		if errors.Is(err, users.ErrWrongToken) {
 			w.WriteHeader(http.StatusBadRequest)
@@ -196,7 +196,7 @@ func (h handlers) Register(w http.ResponseWriter, req *http.Request) {
 		Login: login,
 	})
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to marshal response")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -211,7 +211,7 @@ func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
 
 	err := req.ParseMultipartForm(1024 /* 1 KB */)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to parse form")
 
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
@@ -249,7 +249,7 @@ func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
 
 	user, err := h.ctrl.Login(req.Context(), login, password)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("faield to login")
 
 		switch err {
 		case users.ErrNoUser:
@@ -286,7 +286,7 @@ func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
 		Token: user.Token,
 	})
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("faield to marshal auth response")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -301,7 +301,7 @@ func (h handlers) Logout(w http.ResponseWriter, req *http.Request) {
 
 	err := h.ctrl.Logout(req.Context(), token)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to logout")
 
 		if errors.Is(err, users.ErrNoUser) {
 			json.NewEncoder(w).Encode(server.ServerResponse{

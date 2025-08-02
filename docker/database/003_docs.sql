@@ -19,9 +19,9 @@ CREATE TRIGGER updated_at_docs_trgr BEFORE UPDATE ON docs.meta FOR EACH ROW EXEC
 CREATE TABLE IF NOT EXISTS docs.files
 (
 	file_id varchar(256) UNIQUE NOT NULL,
-	file bytea NOT NULL,
+	file bytea DEFAULT NULL,
 	json bytea DEFAULT NULL,
-	PRIMARY KEY(id)
+	PRIMARY KEY(file_id)
 );
 
 CREATE TABLE IF NOT EXISTS docs.permissions

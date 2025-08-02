@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: API Specification for doc_server
+  description: |
+    This API allows to save documents, share it and
+    distribute through authorized users
+  version: 1.0.0
+paths:
+  /api/register:
+    post:
+      summary:
+        Registers user
+      description: |
+        Admin registers user
+      operationId: registerUser
+      requestBody:
+        application/x-www-form-urlencoded:
+          schema:
+            type: object
+            token:
+              type: string
+            login:
+              type: string
+            pswd:
+              type: string
+
+  /api/auth:
+    post:
+      operationId: authUser
+      requestBody:
+        application/x-www-form-urlencoded:
+          schema:
+            type: object
+            login:
+              type: string
+            pswd:
+              type: string
+
+  /api/auth/:token:
+    parameters:
+      - in: path
+        name: token
+        schema:
+          type string
+    delete:
+      operationId: logoutUser
+
+  /api/docs:
+    post:
+      operationId: loadDoc
+      requestBody:
+        application/x-www-form-urlencoded:
+          schema:
+            type: object
+            meta:
+              type: object
+            json:
+              type: string
+              format: binary
+            file:
+              type: string
+              format: binary
+
+  /api/docs:
+    parameters:
+      token:
+        in: query
+        type: string
+        required: true
+      login:
+        in: query
+        type: string
+        required: false
+      key:
+        in: query
+        type: string
+        required: true
+      value:
+        in: query
+        type: string
+        required: true
+      limit:
+        in: query
+        type: integer
+        required: true
+    get:
+      operationId: getDoc
+
+  /api/docs/:id:
+    parameters:
+      id:
+        in: path
+        type: string
+        required: true
+    get:
+      operationId: getOneDoc
+
+    delete:
+      operationId: deleteOnDoc
