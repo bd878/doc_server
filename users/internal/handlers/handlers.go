@@ -249,7 +249,7 @@ func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
 
 	user, err := h.ctrl.Login(req.Context(), login, password)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("faield to login")
+		h.logger.Error().Err(err).Msg("failed to login")
 
 		switch err {
 		case users.ErrNoUser:
@@ -286,7 +286,7 @@ func (h handlers) Auth(w http.ResponseWriter, req *http.Request) {
 		Token: user.Token,
 	})
 	if err != nil {
-		h.logger.Error().Err(err).Msg("faield to marshal auth response")
+		h.logger.Error().Err(err).Msg("failed to marshal auth response")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -29,7 +29,7 @@ func (r Repository) Save(ctx context.Context, token, login, hashedPassword strin
 }
 
 func (r Repository) Find(ctx context.Context, login, token string) (user *model.User, err error) {
-	const query = "SELECT token, login, salt FROM %s WHERE token IS NOT NULL AND (token = $1 OR login = $2)"
+	const query = "SELECT token, login, salt FROM %s WHERE (token = $1 OR login = $2)"
 
 	user = &model.User{
 	}
