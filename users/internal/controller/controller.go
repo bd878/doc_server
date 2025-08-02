@@ -11,6 +11,7 @@ type Repository interface {
 	Save(ctx context.Context, token, login, hashedPassword string) (err error)
 	Find(ctx context.Context, login, token string) (user *model.User, err error)
 	Forget(ctx context.Context, token string) (err error)
+	Auth(ctx context.Context, login, token string) (err error)
 }
 
 type Controller struct {
@@ -50,6 +51,17 @@ func (r Controller) Login(ctx context.Context, login, password string) (user *mo
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
+	if err != nil {
+		return nil, err
+	}
+
+	token := uuid.New().String()
+	err = r.repo.Auth(ctx, login, token)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Token = token
 
 	return
 }
