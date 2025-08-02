@@ -34,7 +34,16 @@ func (r Repository) Find(ctx context.Context, login, token string) (user *model.
 	user = &model.User{
 	}
 
-	err = r.pool.QueryRowContext(ctx, r.table(query), token, login).Scan(&user.Token, &user.Login, &user.HashedPassword)
+	var nullToken sql.NullString
+
+	err = r.pool.QueryRowContext(ctx, r.table(query), token, login).Scan(&nullToken, &user.Login, &user.HashedPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	if nullToken.Valid {
+		user.Token = nullToken.String
+	}
 
 	return
 }
