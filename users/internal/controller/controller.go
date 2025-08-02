@@ -55,13 +55,17 @@ func (r Controller) Login(ctx context.Context, login, password string) (user *mo
 		return nil, err
 	}
 
-	token := uuid.New().String()
-	err = r.repo.Auth(ctx, login, token)
-	if err != nil {
-		return nil, err
-	}
+	if user.Token == "" {
+		token := uuid.New().String()
+		err = r.repo.Auth(ctx, login, token)
+		if err != nil {
+			return nil, err
+		}
 
-	user.Token = token
+		user.Token = token
+	} else {
+		// return same token
+	}
 
 	return
 }
