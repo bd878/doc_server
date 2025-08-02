@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"errors"
 	"context"
 	"database/sql"
 	"github.com/bd878/doc_server/users/pkg/model"
@@ -41,7 +42,14 @@ func (r Repository) Find(ctx context.Context, login, token string) (user *model.
 func (r Repository) Forget(ctx context.Context, token string) (err error) {
 	const query = "UPDATE %s SET token = NULL WHERE token = $1"
 
-	_, err = r.pool.ExecContext(ctx, r.table(query), token)
+	result, err := r.pool.ExecContext(ctx, r.table(query), token)
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows != 1 {
+		return errors.New("no user")
+	}
 
 	return
 }
