@@ -20,7 +20,7 @@ type UsersGateway interface {
 type Controller interface {
 	List(ctx context.Context, owner, login, key, value string, limit int) (docs []*docs.Meta, err error)
 	Save(ctx context.Context, owner string, f multipart.File, json []byte, meta *docs.Meta) (err error)
-	GetMeta(ctx context.Context, id string) (doc *docs.Meta, err error)
+	GetMeta(ctx context.Context, id, login string) (doc *docs.Meta, err error)
 	ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error)
 	ReadFileStream(ctx context.Context, oid uint32, w io.Writer) (err error)
 	Delete(ctx context.Context, id string) (err error)
@@ -303,7 +303,7 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	meta, err := h.ctrl.GetMeta(req.Context(), id)
+	meta, err := h.ctrl.GetMeta(req.Context(), id, login)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{

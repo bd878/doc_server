@@ -31,6 +31,7 @@ func New(log zerolog.Logger, tableName string, pool *pgxpool.Pool) *Repository {
 
 func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, jsonData []byte, meta *docs.Meta) (err error) {
 	const query = "INSERT INTO %s(id, oid, name, file, json, public, mime, owner_login, grant_logins) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+	const createdAtQuery = "SELECT created_at FROM %s WHERE id = $1"
 
 	var tx pgx.Tx
 	tx, err = r.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -90,6 +91,15 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 		}
 	}
 
+	var created time.Time
+	err = tx.QueryRow(ctx, r.table(createdAtQuery), meta.ID).Scan(&created)
+	if err != nil {
+		return
+	}
+
+	meta.Ts = created.UnixNano()
+	meta.Created = created.Format(time.DateTime)
+
 	return
 }
 
@@ -139,6 +149,7 @@ func (r *Repository) List(ctx context.Context, owner, login, key, value string, 
 		}
 
 		meta.Created = created.Format(time.DateTime)
+		meta.Ts = created.UnixNano()
 
 		list = append(list, meta)
 	}
@@ -150,8 +161,8 @@ func (r *Repository) List(ctx context.Context, owner, login, key, value string, 
 	return
 }
 
-func (r *Repository) GetMeta(ctx context.Context, id string) (meta *docs.Meta, err error) {
-	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s WHERE id = $1"
+func (r *Repository) GetMeta(ctx context.Context, id, login string) (meta *docs.Meta, err error) {
+	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE id = $1 AND (login = $2 OR owner_login = $2)"
 
 	r.log.Log().Str("id", id).Msg("get meta")
 
@@ -161,7 +172,7 @@ func (r *Repository) GetMeta(ctx context.Context, id string) (meta *docs.Meta, e
 
 	meta = &docs.Meta{}
 
-	err = r.pool.QueryRow(ctx, r.table(query), id).Scan(&meta.ID, &oid, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
+	err = r.pool.QueryRow(ctx, r.table(query), id, login).Scan(&meta.ID, &oid, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
 	if err != nil {
 		if errors.Is(pgx.ErrNoRows, err) {
 			err = docs.ErrNoDoc
@@ -181,6 +192,7 @@ func (r *Repository) GetMeta(ctx context.Context, id string) (meta *docs.Meta, e
 	}
 
 	meta.Created = created.Format(time.DateTime)
+	meta.Ts = created.UnixNano()
 
 	return
 }

@@ -11,6 +11,7 @@ type (
 		File      bool              `json:"file"`
 		Public    bool              `json:"public"`
 		Created   string            `json:"created"`
+		Ts        int64             `json:"-"`
 		Grant     []string          `json:"grant"`
 	}
 
