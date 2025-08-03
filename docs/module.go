@@ -21,7 +21,7 @@ func (Module) Startup(ctx context.Context, mono system.Service) (err error) {
 
 	gateway := users.NewGateway(conn)
 
-	docs := repository.New(mono.Logger(), "docs.meta", "docs.permissions", mono.DB())
+	docs := repository.New(mono.Logger(), "docs.meta", mono.DB())
 	ctrl := controller.New(docs)
 
 	handlers.RegisterHandlers(mono.Mux(), ctrl, gateway, mono.Logger())

@@ -1,0 +1,5 @@
+url = http://138.124.107.242:80/api/docs
+-XPOST
+-H "Content-Type: multipart/form-data"
+-F meta=%META%
+-F json=%JSON%

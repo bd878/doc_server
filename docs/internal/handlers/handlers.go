@@ -17,9 +17,8 @@ type UsersGateway interface {
 }
 
 type Controller interface {
-	List(ctx context.Context, key, value string, limit int) (docs []*docs.Meta, isLastPage bool, err error)
-	SaveFile(ctx context.Context, owner string, f multipart.File, meta *docs.Meta) (err error)
-	SaveJSON(ctx context.Context, owner string, json []byte, meta *docs.Meta) (err error)
+	List(ctx context.Context, owner, login, key, value string, limit int) (docs []*docs.Meta, err error)
+	Save(ctx context.Context, owner string, f multipart.File, json []byte, meta *docs.Meta) (err error)
 	GetMeta(ctx context.Context, id string) (doc *docs.Meta, err error)
 	ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error)
 	ReadFileStream(ctx context.Context, id string) (file io.Reader, err error)
@@ -48,7 +47,7 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 
 	err := req.ParseMultipartForm(10 << 20 /* 10 MB */)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to parse form")
 
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
@@ -74,7 +73,7 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 
 	err = json.Unmarshal([]byte(rawMeta), &meta)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to unmarshal meta")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -92,7 +91,7 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 
 	login, err := h.gateway.Auth(req.Context(), meta.Token)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to auth")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -102,10 +101,11 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	var f multipart.File
 	if meta.File {
-		f, _, err := req.FormFile("file")
+		f, _, err = req.FormFile("file")
 		if err != nil {
-			h.logger.Error().Err(err)
+			h.logger.Error().Err(err).Msg("failed to read form file")
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(server.ServerResponse{
 				Error: &server.ErrorCode{
@@ -115,78 +115,52 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 			})
 			return
 		}
-
-		err = h.ctrl.SaveFile(req.Context(), login, f, &docs.Meta{
-			Name:     meta.Name,
-			File:     meta.File,
-			Mime:     meta.Mime,
-			Public:   meta.Public,
-			Grant:    meta.Grant,
-		})
-		if err != nil {
-			h.logger.Error().Err(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		response, err := json.Marshal(docs.SaveResponse{
-			File: meta.Name,
-		})
-		if err != nil {
-			h.logger.Error().Err(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		json.NewEncoder(w).Encode(server.ServerResponse{
-			Data: json.RawMessage(response),
-		})
-	} else {
-		jsonData := req.PostFormValue("jsonData")
-
-		if jsonData == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(server.ServerResponse{
-				Error: &server.ErrorCode{
-					Code: docs.CodeNoJSON,
-					Text: "json required",
-				},
-			})
-			return
-		}
-
-		err = h.ctrl.SaveJSON(req.Context(), login, []byte(jsonData), &docs.Meta{
-			Name:     meta.Name,
-			File:     meta.File,
-			Mime:     meta.Mime,
-			Public:   meta.Public,
-			Grant:    meta.Grant,
-		})
-		if err != nil {
-			h.logger.Error().Err(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		response, err := json.Marshal(docs.SaveResponse{
-			JSON: json.RawMessage([]byte(jsonData)),
-		})
-		if err != nil {
-			h.logger.Error().Err(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		json.NewEncoder(w).Encode(server.ServerResponse{
-			Data: json.RawMessage(response),
-		})
 	}
+
+	jsonData := req.PostFormValue("json")
+	if !meta.File && jsonData == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: docs.CodeNoJSON,
+				Text: "json required",
+			},
+		})
+		return
+	}
+
+	err = h.ctrl.Save(req.Context(), login, f, []byte(jsonData), &docs.Meta{
+		Name:     meta.Name,
+		File:     meta.File,
+		Mime:     meta.Mime,
+		Public:   meta.Public,
+		Grant:    meta.Grant,
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to save file")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	response, err := json.Marshal(docs.SaveResponse{
+		File: meta.Name,
+		JSON: json.RawMessage(jsonData),
+	})
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to marshal response")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(server.ServerResponse{
+		Data: json.RawMessage(response),
+	})
 }
 
 func (h handlers) List(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to parse form")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -203,17 +177,19 @@ func (h handlers) List(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	login, err := h.gateway.Auth(req.Context(), token)
+	owner, err := h.gateway.Auth(req.Context(), token)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to auth")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if login == "" {
+	if owner == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+
+	login := req.FormValue("login")
 
 	key := req.FormValue("key")
 	if key == "" {
@@ -253,7 +229,7 @@ func (h handlers) List(w http.ResponseWriter, req *http.Request) {
 
 	limit, err := strconv.Atoi(rawLimit)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to parse limit")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(server.ServerResponse{
 			Error: &server.ErrorCode{
@@ -264,9 +240,9 @@ func (h handlers) List(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	list, _, err := h.ctrl.List(req.Context(), key, value, limit)
+	list, err := h.ctrl.List(req.Context(), owner, login, key, value, limit)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to list")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -275,7 +251,7 @@ func (h handlers) List(w http.ResponseWriter, req *http.Request) {
 		Docs: list,
 	})
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to marshal response")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -291,7 +267,7 @@ func (h handlers) ListHead(w http.ResponseWriter, req *http.Request) {
 func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to parse form")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -310,7 +286,7 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 
 	login, err := h.gateway.Auth(req.Context(), token)
 	if err != nil {
-		h.logger.Error().Err(err)
+		h.logger.Error().Err(err).Msg("failed to auth")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -341,7 +317,7 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 	if meta.File {
 		stream, err := h.ctrl.ReadFileStream(req.Context(), id)
 		if err != nil {
-			h.logger.Error().Err(err)
+			h.logger.Error().Err(err).Msg("failed to read file stream")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -351,14 +327,14 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 
 		_, err = io.Copy(w, stream)
 		if err != nil {
-			h.logger.Error().Err(err)
+			h.logger.Error().Err(err).Msg("failed to write file to output")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	} else {
 		jsonData, err := h.ctrl.ReadJSON(req.Context(), id)
 		if err != nil {
-			h.logger.Error().Err(err)
+			h.logger.Error().Err(err).Msg("failed to read json data")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

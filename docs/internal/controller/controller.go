@@ -10,9 +10,8 @@ import (
 )
 
 type Repository interface {
-	SaveFile(ctx context.Context, owner string, f multipart.File, meta *docs.Meta) (err error)
-	SaveJSON(ctx context.Context, owner string, data []byte, meta *docs.Meta) (err error)
-	List(ctx context.Context, key, value string, limit int) (docs []*docs.Meta, isLastPage bool, err error)
+	Save(ctx context.Context, owner string, f multipart.File, json []byte, meta *docs.Meta) (err error)
+	List(ctx context.Context, owner, login, key, value string, limit int) (docs []*docs.Meta, err error)
 	GetMeta(ctx context.Context, id string) (meta *docs.Meta, err error)
 	ReadFile(ctx context.Context, id string) (file io.Reader, err error)
 	ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error)
@@ -27,20 +26,16 @@ func New(repo Repository) *Controller {
 	return &Controller{repo}
 }
 
-func (c Controller) SaveFile(ctx context.Context, owner string, f multipart.File, meta *docs.Meta) (err error) {
+func (c Controller) Save(ctx context.Context, owner string, f multipart.File, json []byte, meta *docs.Meta) (err error) {
 	meta.ID = uuid.New().String()
 
-	err = c.repo.SaveFile(ctx, owner, f, meta)
+	err = c.repo.Save(ctx, owner, f, json, meta)
 
 	return
 }
 
-func (c Controller) SaveJSON(ctx context.Context, owner string, json []byte, meta *docs.Meta) (err error) {
-	return
-}
-
-func (c Controller) List(ctx context.Context, key, value string, limit int) (docs []*docs.Meta, isLastPage bool, err error) {
-	return
+func (c Controller) List(ctx context.Context, owner, login, key, value string, limit int) (docs []*docs.Meta, err error) {
+	return c.repo.List(ctx, owner, login, key, value, limit)
 }
 
 func (c Controller) GetMeta(ctx context.Context, id string) (doc *docs.Meta, err error) {
