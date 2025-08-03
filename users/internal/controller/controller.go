@@ -10,17 +10,22 @@ import (
 type Repository interface {
 	Save(ctx context.Context, token, login, hashedPassword string) (err error)
 	Find(ctx context.Context, login, token string) (user *model.User, err error)
-	Forget(ctx context.Context, token string) (err error)
+	Forget(ctx context.Context, token string) (login string, err error)
 	Auth(ctx context.Context, login, token string) (err error)
 }
 
-type Controller struct {
-	repo  Repository
-	token string
+type DocsGateway interface {
+	FreeMemory(ctx context.Context, login string) (err error)
 }
 
-func New(repo Repository, token string) *Controller {
-	return &Controller{repo, token}
+type Controller struct {
+	repo    Repository
+	gateway DocsGateway
+	token   string
+}
+
+func New(repo Repository, gateway DocsGateway, token string) *Controller {
+	return &Controller{repo, gateway, token}
 }
 
 func (r Controller) Register(ctx context.Context, adminToken, login, password string) (err error) {
@@ -71,5 +76,12 @@ func (r Controller) Login(ctx context.Context, login, password string) (user *mo
 }
 
 func (r Controller) Logout(ctx context.Context, token string) (err error) {
-	return r.repo.Forget(ctx, token)
+	var login string
+	login, err = r.repo.Forget(ctx, token)
+	if err != nil {
+		return
+	}
+
+	err = r.gateway.FreeMemory(ctx, login)
+	return
 }

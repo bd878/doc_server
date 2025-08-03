@@ -2,8 +2,10 @@ package repository
 
 import (
 	"fmt"
+	"os"
 	"errors"
 	"context"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/bd878/doc_server/users/pkg/model"
@@ -49,17 +51,50 @@ func (r Repository) Find(ctx context.Context, login, token string) (user *model.
 	return
 }
 
-func (r Repository) Forget(ctx context.Context, token string) (err error) {
+func (r Repository) Forget(ctx context.Context, token string) (login string, err error) {
 	const query = "UPDATE %s SET token = NULL WHERE token = $1"
+	const queryLogin = "SELECT login FROM %s WHERE token = $1"
 
-	result, err := r.pool.Exec(ctx, r.table(query), token)
+	var tx pgx.Tx
+	tx, err = r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return "", err
+	}
+	defer func() {
+		p := recover()
+		switch {
+		case p != nil:
+			_ = tx.Rollback(ctx)
+			panic(p)
+		case err != nil:
+			if errors.Is(err, model.ErrNoUser) {
+				return
+			} else {
+				fmt.Fprintf(os.Stderr, "rollback with error: %w", err)
+				err = tx.Rollback(ctx)
+			}
+		default:
+			err = tx.Commit(ctx)
+		}
+	}()
+
+	err = tx.QueryRow(ctx, r.table(queryLogin), token).Scan(&login)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", model.ErrNoUser
+		}
+
+		return "", err
+	}
+
+	result, err := tx.Exec(ctx, r.table(query), token)
+	if err != nil {
+		return "", err
 	}
 
 	rows := result.RowsAffected()
 	if rows != 1 {
-		return errors.New("no user")
+		return "", model.ErrNoUser
 	}
 
 	return

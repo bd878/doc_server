@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package docspb;
+
+option go_package = "github.com/bd878/doc_server/docs/docspb";
+
+service DocsService {
+	rpc FreeMemory(FreeMemoryRequest) returns (FreeMemoryResponse) {};
+}
+
+message FreeMemoryRequest {
+	string login = 1;
+}
+
+message FreeMemoryResponse {
+}

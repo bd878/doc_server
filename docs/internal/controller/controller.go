@@ -53,3 +53,7 @@ func (c Controller) ReadJSON(ctx context.Context, id string) (json json.RawMessa
 func (c Controller) Delete(ctx context.Context, id string) (err error) {
 	return c.repo.Delete(ctx, id)
 }
+
+func (c Controller) FreeCache(ctx context.Context, login string) (err error) {
+	return nil
+}
