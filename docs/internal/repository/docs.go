@@ -157,6 +157,9 @@ func (r *Repository) GetMeta(ctx context.Context, id string) (meta *docs.Meta, e
 
 	err = r.pool.QueryRow(ctx, r.table(query), id).Scan(&meta.ID, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
 	if err != nil {
+		if errors.Is(pgx.ErrNoRows, err) {
+			err = docs.ErrNoDoc
+		}
 		return nil, err
 	}
 
@@ -201,6 +204,9 @@ func (r *Repository) ReadFile(ctx context.Context, id string, writer io.Writer) 
 
 	err = tx.QueryRow(ctx, r.table(query), id).Scan(&oid, &file)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return docs.ErrNoDoc
+		}
 		return
 	}
 
@@ -257,9 +263,10 @@ func (r *Repository) Delete(ctx context.Context, id string) (err error) {
 		case err != nil:
 			if errors.Is(err, docs.ErrNoDoc) {
 				return
+			} else {
+				fmt.Fprintf(os.Stderr, "rollback with error: %w", err)
+				err = tx.Rollback(ctx)
 			}
-			fmt.Fprintf(os.Stderr, "rollback with error: %w", err)
-			err = tx.Rollback(ctx)
 		default:
 			err = tx.Commit(ctx)
 		}
@@ -269,6 +276,9 @@ func (r *Repository) Delete(ctx context.Context, id string) (err error) {
 
 	err = tx.QueryRow(ctx, r.table(query), id).Scan(&oid)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return docs.ErrNoDoc
+		}
 		return
 	}
 
@@ -280,6 +290,9 @@ func (r *Repository) Delete(ctx context.Context, id string) (err error) {
 
 	result, err := tx.Exec(ctx, r.table(deleteQuery), id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = docs.ErrNoDoc
+		}
 		return err
 	}
 
