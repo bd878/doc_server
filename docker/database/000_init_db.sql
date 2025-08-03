@@ -14,7 +14,8 @@ REVOKE ALL ON pg_catalog.pg_roles FROM PUBLIC;
 REVOKE ALL ON pg_catalog.pg_user FROM PUBLIC;
 REVOKE ALL ON pg_catalog.pg_user_mappings FROM PUBLIC;
 
-CREATE ROLE doc_server_admin WITH ENCRYPTED PASSWORD 'md5df6f58808ebfd3e609c234cf2283a989';
+ALTER SYSTEM SET password_encryption = 'md5'
+CREATE USER doc_server_admin WITH ENCRYPTED PASSWORD 'md5df6f58808ebfd3e609c234cf2283a989';
 
 GRANT ALL ON SCHEMA public TO doc_server_admin;
 GRANT ALL ON SCHEMA information_schema TO doc_server_admin;
