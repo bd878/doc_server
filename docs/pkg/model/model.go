@@ -5,6 +5,7 @@ import "encoding/json"
 type (
 	Meta struct {
 		ID        string            `json:"id"`
+		Oid       uint32            `json:"-"`
 		Name      string            `json:"name"`
 		Mime      string            `json:"mime"`
 		File      bool              `json:"file"`

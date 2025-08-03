@@ -94,8 +94,8 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 }
 
 func (r *Repository) List(ctx context.Context, owner, login, key, value string, limit int) (list []*docs.Meta, err error) {
-	const queryLogin = "SELECT id, name, file, public, mime, created_at, grant_logins FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE %s = $2 AND login = $1 ORDER BY created_at DESC LIMIT $3"
-	const query = "SELECT id, name, file, public, mime, created_at, grant_logins FROM %s WHERE %s = $2 AND owner_login = $1 ORDER BY created_at DESC LIMIT $3"
+	const queryLogin = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE %s = $2 AND login = $1 ORDER BY created_at DESC LIMIT $3"
+	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s WHERE %s = $2 AND owner_login = $1 ORDER BY created_at DESC LIMIT $3"
 
 	r.log.Log().Str("owner", owner).Str("login", login).Str("key", key).Str("value", value).Int("limit", limit).Msg("list docs")
 
@@ -120,8 +120,9 @@ func (r *Repository) List(ctx context.Context, owner, login, key, value string, 
 
 		var grant []byte
 		var created time.Time
+		var oid *uint32
 
-		err = rows.Scan(&meta.ID, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
+		err = rows.Scan(&meta.ID, &oid, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
 		if err != nil {
 			return
 		}
@@ -131,6 +132,10 @@ func (r *Repository) List(ctx context.Context, owner, login, key, value string, 
 			if err != nil {
 				return
 			}
+		}
+
+		if oid != nil {
+			meta.Oid = *oid
 		}
 
 		meta.Created = created.Format(time.DateTime)
@@ -146,16 +151,17 @@ func (r *Repository) List(ctx context.Context, owner, login, key, value string, 
 }
 
 func (r *Repository) GetMeta(ctx context.Context, id string) (meta *docs.Meta, err error) {
-	const query = "SELECT id, name, file, public, mime, created_at, grant_logins FROM %s WHERE id = $1"
+	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s WHERE id = $1"
 
 	r.log.Log().Str("id", id).Msg("get meta")
 
 	var grant []byte
 	var created time.Time
+	var oid *uint32
 
 	meta = &docs.Meta{}
 
-	err = r.pool.QueryRow(ctx, r.table(query), id).Scan(&meta.ID, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
+	err = r.pool.QueryRow(ctx, r.table(query), id).Scan(&meta.ID, &oid, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
 	if err != nil {
 		if errors.Is(pgx.ErrNoRows, err) {
 			err = docs.ErrNoDoc
@@ -170,16 +176,16 @@ func (r *Repository) GetMeta(ctx context.Context, id string) (meta *docs.Meta, e
 		}
 	}
 
+	if oid != nil {
+		meta.Oid = *oid
+	}
+
 	meta.Created = created.Format(time.DateTime)
 
 	return
 }
 
-func (r *Repository) ReadFile(ctx context.Context, id string, writer io.Writer) (err error) {
-	const query = "SELECT oid, file FROM %s WHERE id = $1"
-
-	r.log.Log().Str("id", id).Msg("read file")
-
+func (r *Repository) ReadFile(ctx context.Context, oid uint32, writer io.Writer) (err error) {
 	var tx pgx.Tx
 	tx, err = r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
@@ -199,23 +205,8 @@ func (r *Repository) ReadFile(ctx context.Context, id string, writer io.Writer) 
 		}
 	}()
 
-	var oid int
-	var file bool
-
-	err = tx.QueryRow(ctx, r.table(query), id).Scan(&oid, &file)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return docs.ErrNoDoc
-		}
-		return
-	}
-
-	if !file {
-		return fmt.Errorf("not a file %s", id)
-	}
-
 	lb := tx.LargeObjects()
-	object, err := lb.Open(ctx, uint32(oid), pgx.LargeObjectModeRead)
+	object, err := lb.Open(ctx, oid, pgx.LargeObjectModeRead)
 	if err != nil {
 		return err
 	}

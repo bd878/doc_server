@@ -22,7 +22,7 @@ type Controller interface {
 	Save(ctx context.Context, owner string, f multipart.File, json []byte, meta *docs.Meta) (err error)
 	GetMeta(ctx context.Context, id string) (doc *docs.Meta, err error)
 	ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error)
-	ReadFileStream(ctx context.Context, id string, w io.Writer) (err error)
+	ReadFileStream(ctx context.Context, oid uint32, w io.Writer) (err error)
 	Delete(ctx context.Context, id string) (err error)
 }
 
@@ -319,7 +319,7 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Disposition", "attachment; " + "filename*=UTF-8''" + meta.Name)
 		w.Header().Set("Content-Type", meta.Mime)
 
-		err = h.ctrl.ReadFileStream(req.Context(), id, w)
+		err = h.ctrl.ReadFileStream(req.Context(), meta.Oid, w)
 		if err != nil {
 			h.logger.Error().Err(err).Msg("failed to read file stream")
 			w.WriteHeader(http.StatusInternalServerError)
