@@ -5,12 +5,13 @@ import (
 	"io"
 	"mime/multipart"
 	"encoding/json"
+	"github.com/google/uuid"
 	docs "github.com/bd878/doc_server/docs/pkg/model"
 )
 
 type Repository interface {
-	SaveFile(ctx context.Context, f multipart.File, meta *docs.Meta) (err error)
-	SaveJSON(ctx context.Context, data []byte, meta *docs.Meta) (err error)
+	SaveFile(ctx context.Context, owner string, f multipart.File, meta *docs.Meta) (err error)
+	SaveJSON(ctx context.Context, owner string, data []byte, meta *docs.Meta) (err error)
 	List(ctx context.Context, key, value string, limit int) (docs []*docs.Meta, isLastPage bool, err error)
 	GetMeta(ctx context.Context, id string) (meta *docs.Meta, err error)
 	ReadFile(ctx context.Context, id string) (file io.Reader, err error)
@@ -26,11 +27,15 @@ func New(repo Repository) *Controller {
 	return &Controller{repo}
 }
 
-func (c Controller) SaveFile(ctx context.Context, f multipart.File, meta *docs.Meta) (err error) {
+func (c Controller) SaveFile(ctx context.Context, owner string, f multipart.File, meta *docs.Meta) (err error) {
+	meta.ID = uuid.New().String()
+
+	err = c.repo.SaveFile(ctx, owner, f, meta)
+
 	return
 }
 
-func (c Controller) SaveJSON(ctx context.Context, json []byte, meta *docs.Meta) (err error) {
+func (c Controller) SaveJSON(ctx context.Context, owner string, json []byte, meta *docs.Meta) (err error) {
 	return
 }
 

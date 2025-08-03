@@ -7,12 +7,12 @@ import (
 	"time"
 	"context"
 	"net/http"
-	"database/sql"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/errgroup"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/bd878/doc_server/config"
 	"github.com/bd878/doc_server/internal/waiter"
@@ -21,7 +21,7 @@ import (
 
 type System struct {
 	cfg      config.AppConfig
-	db       *sql.DB
+	db       *pgxpool.Pool
 	modules  []Module
 	logger   zerolog.Logger
 	waiter   waiter.Waiter
@@ -51,7 +51,8 @@ func (s System) Config() config.AppConfig {
 }
 
 func (s *System) initDB() (err error) {
-	s.db, err = sql.Open("pgx", s.cfg.PG.Conn)
+	s.db, err = pgxpool.New(context.Background(), s.cfg.PG.Conn)
+
 	return err
 }
 
@@ -85,7 +86,7 @@ func (s *System) Logger() zerolog.Logger {
 	return s.logger
 }
 
-func (s *System) DB() *sql.DB {
+func (s *System) DB() *pgxpool.Pool {
 	return s.db
 }
 
@@ -157,6 +158,19 @@ func (a *System) WaitForRPC(ctx context.Context) error {
 		case <-stopped:
 			return nil
 		}
+	})
+
+	return group.Wait()
+}
+
+func (a *System) WaitForDB(ctx context.Context) error {
+	group, gCtx := errgroup.WithContext(ctx)
+
+	group.Go(func() error {
+		<-gCtx.Done()
+		fmt.Fprintln(os.Stdout, "closing pgpool connections")
+		a.db.Close()
+		return nil
 	})
 
 	return group.Wait()

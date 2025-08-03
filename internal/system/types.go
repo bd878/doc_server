@@ -3,17 +3,17 @@ package system
 import (
 	"context"
 	"net/http"
-	"database/sql"
 
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/bd878/doc_server/config"
 	"github.com/bd878/doc_server/internal/waiter"
 )
 
 type Service interface {
-	DB()      *sql.DB
+	DB()      *pgxpool.Pool
 	RPC()     *grpc.Server
 	Mux()     *http.ServeMux
 	Config()   config.AppConfig

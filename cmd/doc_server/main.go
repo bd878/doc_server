@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"database/sql"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -44,13 +43,6 @@ func run() (err error) {
 		},
 	}
 
-	defer func(db *sql.DB) {
-		err := db.Close()
-		if err != nil {
-			return
-		}
-	}(m.DB())
-
 	if err = m.startupModules(); err != nil {
 		return err
 	}
@@ -58,6 +50,7 @@ func run() (err error) {
 	m.Waiter().Add(
 		m.WaitForWeb,
 		m.WaitForRPC,
+		m.WaitForDB,
 	)
 
 	return m.Waiter().Wait()

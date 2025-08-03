@@ -8,10 +8,14 @@ service UsersService {
 	rpc Auth(AuthRequest) returns (AuthResponse) {};
 }
 
+message User {
+	string login = 1;
+}
+
 message AuthRequest {
 	string token = 1;
 }
 
 message AuthResponse {
-	bool   ok = 1;
+	User user = 1;
 }

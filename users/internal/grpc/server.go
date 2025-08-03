@@ -20,18 +20,20 @@ type server struct {
 
 var _ userspb.UsersServiceServer = (*server)(nil)
 
-func RegisterServer(ctrl Controller, registrar grpc.ServiceRegistrar) {
+func RegisterServer(ctrl Controller, registrar *grpc.Server) {
 	userspb.RegisterUsersServiceServer(registrar, server{ctrl: ctrl})
 }
 
 func (s server) Auth(ctx context.Context, request *userspb.AuthRequest) (
 	*userspb.AuthResponse, error,
 ) {
-	_, err := s.ctrl.Auth(ctx, request.Token)
+	user, err := s.ctrl.Auth(ctx, request.Token)
 	if err != nil {
 		return nil, err
 	}
 	return &userspb.AuthResponse{
-		Ok: true,
+		User: &userspb.User{
+			Login: user.Login,
+		},
 	}, nil
 }

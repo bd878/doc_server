@@ -1,3 +1,8 @@
 A simple doc server that authorizes users and keeps files
 
-To start: `docker-compose up -d`
+To start:
+```
+make
+docker-compose build
+docker-compose up -d
+```

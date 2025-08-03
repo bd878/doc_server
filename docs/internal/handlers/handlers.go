@@ -13,13 +13,13 @@ import (
 )
 
 type UsersGateway interface {
-	Auth(ctx context.Context, token string) (ok bool, err error)
+	Auth(ctx context.Context, token string) (login string, err error)
 }
 
 type Controller interface {
 	List(ctx context.Context, key, value string, limit int) (docs []*docs.Meta, isLastPage bool, err error)
-	SaveFile(ctx context.Context, f multipart.File, meta *docs.Meta) (err error)
-	SaveJSON(ctx context.Context, json []byte, meta *docs.Meta) (err error)
+	SaveFile(ctx context.Context, owner string, f multipart.File, meta *docs.Meta) (err error)
+	SaveJSON(ctx context.Context, owner string, json []byte, meta *docs.Meta) (err error)
 	GetMeta(ctx context.Context, id string) (doc *docs.Meta, err error)
 	ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error)
 	ReadFileStream(ctx context.Context, id string) (file io.Reader, err error)
@@ -90,14 +90,14 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ok, err := h.gateway.Auth(req.Context(), meta.Token)
+	login, err := h.gateway.Auth(req.Context(), meta.Token)
 	if err != nil {
 		h.logger.Error().Err(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if !ok {
+	if login == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -116,7 +116,7 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		err = h.ctrl.SaveFile(req.Context(), f, &docs.Meta{
+		err = h.ctrl.SaveFile(req.Context(), login, f, &docs.Meta{
 			Name:     meta.Name,
 			File:     meta.File,
 			Mime:     meta.Mime,
@@ -155,7 +155,7 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		err = h.ctrl.SaveJSON(req.Context(), []byte(jsonData), &docs.Meta{
+		err = h.ctrl.SaveJSON(req.Context(), login, []byte(jsonData), &docs.Meta{
 			Name:     meta.Name,
 			File:     meta.File,
 			Mime:     meta.Mime,
@@ -203,14 +203,14 @@ func (h handlers) List(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ok, err := h.gateway.Auth(req.Context(), token)
+	login, err := h.gateway.Auth(req.Context(), token)
 	if err != nil {
 		h.logger.Error().Err(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if !ok {
+	if login == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -308,14 +308,14 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	ok, err := h.gateway.Auth(req.Context(), token)
+	login, err := h.gateway.Auth(req.Context(), token)
 	if err != nil {
 		h.logger.Error().Err(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if !ok {
+	if login == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
