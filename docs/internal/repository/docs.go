@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 	"context"
+	"errors"
 	"encoding/json"
 	"mime/multipart"
 	"github.com/rs/zerolog"
@@ -254,6 +255,9 @@ func (r *Repository) Delete(ctx context.Context, id string) (err error) {
 			_ = tx.Rollback(ctx)
 			panic(p)
 		case err != nil:
+			if errors.Is(err, docs.ErrNoDoc) {
+				return
+			}
 			fmt.Fprintf(os.Stderr, "rollback with error: %w", err)
 			err = tx.Rollback(ctx)
 		default:
@@ -274,9 +278,13 @@ func (r *Repository) Delete(ctx context.Context, id string) (err error) {
 		return
 	}
 
-	_, err = tx.Exec(ctx, r.table(deleteQuery), id)
+	result, err := tx.Exec(ctx, r.table(deleteQuery), id)
 	if err != nil {
-		return
+		return err
+	}
+
+	if result.RowsAffected() != 1 {
+		return docs.ErrNoDoc
 	}
 
 	return

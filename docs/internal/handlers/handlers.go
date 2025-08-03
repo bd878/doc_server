@@ -378,9 +378,21 @@ func (h handlers) Delete(w http.ResponseWriter, req *http.Request) {
 
 	err = h.ctrl.Delete(req.Context(), id)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("failed to delete")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		switch err {
+		case docs.ErrNoDoc:
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(server.ServerResponse{
+				Error: &server.ErrorCode{
+					Code: docs.CodeDocNotFound,
+					Text: "no document",
+				},
+			})
+			return
+		default:
+			h.logger.Error().Err(err).Msg("failed to delete")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	response := json.RawMessage([]byte(fmt.Sprintf(`{"%s": true}`, id)))
