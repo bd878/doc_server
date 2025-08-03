@@ -22,7 +22,7 @@ CREATE TRIGGER updated_at_docs_trgr BEFORE UPDATE ON docs.meta FOR EACH ROW EXEC
 
 CREATE TABLE IF NOT EXISTS docs.permissions
 (
-	file_id      varchar(256) NOT NULL REFERENCES meta(id),
+	file_id      varchar(256) NOT NULL REFERENCES docs.meta(id),
 	user_login   varchar(256) NOT NULL
 );
 
