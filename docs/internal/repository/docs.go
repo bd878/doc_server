@@ -93,8 +93,8 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 }
 
 func (r *Repository) List(ctx context.Context, owner, login, key, value string, limit int) (list []*docs.Meta, err error) {
-	const queryLogin = "SELECT id, name, file, public, mime, created_at, grant_logins FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE %s = $2 AND login = $1 LIMIT $3"
-	const query = "SELECT id, name, file, public, mime, created_at, grant_logins FROM %s WHERE %s = $2 AND owner_login = $1 LIMIT $3"
+	const queryLogin = "SELECT id, name, file, public, mime, created_at, grant_logins FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE %s = $2 AND login = $1 ORDER BY created_at DESC LIMIT $3"
+	const query = "SELECT id, name, file, public, mime, created_at, grant_logins FROM %s WHERE %s = $2 AND owner_login = $1 ORDER BY created_at DESC LIMIT $3"
 
 	r.log.Log().Str("owner", owner).Str("login", login).Str("key", key).Str("value", value).Int("limit", limit).Msg("list docs")
 
@@ -145,18 +145,140 @@ func (r *Repository) List(ctx context.Context, owner, login, key, value string, 
 }
 
 func (r *Repository) GetMeta(ctx context.Context, id string) (meta *docs.Meta, err error) {
+	const query = "SELECT id, name, file, public, mime, created_at, grant_logins FROM %s WHERE id = $1"
+
+	r.log.Log().Str("id", id).Msg("get meta")
+
+	var grant []byte
+	var created time.Time
+
+	meta = &docs.Meta{}
+
+	err = r.pool.QueryRow(ctx, r.table(query), id).Scan(&meta.ID, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
+	if err != nil {
+		return nil, err
+	}
+
+	if grant != nil {
+		err = json.Unmarshal(grant, &meta.Grant)
+		if err != nil {
+			return
+		}
+	}
+
+	meta.Created = created.Format(time.DateTime)
+
 	return
 }
 
-func (r *Repository) ReadFile(ctx context.Context, id string) (file io.Reader, err error) {
+func (r *Repository) ReadFile(ctx context.Context, id string, writer io.Writer) (err error) {
+	const query = "SELECT oid, file FROM %s WHERE id = $1"
+
+	r.log.Log().Str("id", id).Msg("read file")
+
+	var tx pgx.Tx
+	tx, err = r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		p := recover()
+		switch {
+		case p != nil:
+			_ = tx.Rollback(ctx)
+			panic(p)
+		case err != nil:
+			fmt.Fprintf(os.Stderr, "rollback with error: %w", err)
+			err = tx.Rollback(ctx)
+		default:
+			err = tx.Commit(ctx)
+		}
+	}()
+
+	var oid int
+	var file bool
+
+	err = tx.QueryRow(ctx, r.table(query), id).Scan(&oid, &file)
+	if err != nil {
+		return
+	}
+
+	if !file {
+		return fmt.Errorf("not a file %s", id)
+	}
+
+	lb := tx.LargeObjects()
+	object, err := lb.Open(ctx, uint32(oid), pgx.LargeObjectModeRead)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(writer, object)
+	if err != nil {
+		return err
+	}
+
+	object.Close()
+
 	return
 }
 
-func (r *Repository) ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error) {
-	return
+func (r *Repository) ReadJSON(ctx context.Context, id string) (result json.RawMessage, err error) {
+	const query = "SELECT json FROM %s WHERE id = $1"
+
+	var jsonData []byte
+
+	err = r.pool.QueryRow(ctx, r.table(query), id).Scan(&jsonData)
+	if err != nil {
+		return
+	}
+
+	return json.RawMessage(jsonData), nil
 }
 
 func (r *Repository) Delete(ctx context.Context, id string) (err error) {
+	const query = "SELECT oid FROM %s WHERE id = $1"
+	const deleteQuery = "DELETE FROM %s WHERE id = $1"
+
+	r.log.Log().Str("id", id).Msg("delete file")
+
+	var tx pgx.Tx
+	tx, err = r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		p := recover()
+		switch {
+		case p != nil:
+			_ = tx.Rollback(ctx)
+			panic(p)
+		case err != nil:
+			fmt.Fprintf(os.Stderr, "rollback with error: %w", err)
+			err = tx.Rollback(ctx)
+		default:
+			err = tx.Commit(ctx)
+		}
+	}()
+
+	var oid int
+
+	err = tx.QueryRow(ctx, r.table(query), id).Scan(&oid)
+	if err != nil {
+		return
+	}
+
+	lb := tx.LargeObjects()
+	err = lb.Unlink(ctx, uint32(oid))
+	if err != nil {
+		return
+	}
+
+	_, err = tx.Exec(ctx, r.table(deleteQuery), id)
+	if err != nil {
+		return
+	}
+
 	return
 }
 

@@ -13,7 +13,7 @@ type Repository interface {
 	Save(ctx context.Context, owner string, f multipart.File, json []byte, meta *docs.Meta) (err error)
 	List(ctx context.Context, owner, login, key, value string, limit int) (docs []*docs.Meta, err error)
 	GetMeta(ctx context.Context, id string) (meta *docs.Meta, err error)
-	ReadFile(ctx context.Context, id string) (file io.Reader, err error)
+	ReadFile(ctx context.Context, id string, writer io.Writer) (err error)
 	ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error)
 	Delete(ctx context.Context, id string) (err error)
 }
@@ -39,17 +39,17 @@ func (c Controller) List(ctx context.Context, owner, login, key, value string, l
 }
 
 func (c Controller) GetMeta(ctx context.Context, id string) (doc *docs.Meta, err error) {
-	return
+	return c.repo.GetMeta(ctx, id)
 }
 
-func (c Controller) ReadFileStream(ctx context.Context, id string) (file io.Reader, err error) {
-	return
+func (c Controller) ReadFileStream(ctx context.Context, id string, writer io.Writer) (err error) {
+	return c.repo.ReadFile(ctx, id, writer)
 }
 
 func (c Controller) ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error) {
-	return
+	return c.repo.ReadJSON(ctx, id)
 }
 
 func (c Controller) Delete(ctx context.Context, id string) (err error) {
-	return
+	return c.repo.Delete(ctx, id)
 }

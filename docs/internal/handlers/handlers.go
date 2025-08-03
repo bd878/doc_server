@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -21,7 +22,7 @@ type Controller interface {
 	Save(ctx context.Context, owner string, f multipart.File, json []byte, meta *docs.Meta) (err error)
 	GetMeta(ctx context.Context, id string) (doc *docs.Meta, err error)
 	ReadJSON(ctx context.Context, id string) (json json.RawMessage, err error)
-	ReadFileStream(ctx context.Context, id string) (file io.Reader, err error)
+	ReadFileStream(ctx context.Context, id string, w io.Writer) (err error)
 	Delete(ctx context.Context, id string) (err error)
 }
 
@@ -315,19 +316,12 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if meta.File {
-		stream, err := h.ctrl.ReadFileStream(req.Context(), id)
-		if err != nil {
-			h.logger.Error().Err(err).Msg("failed to read file stream")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		w.Header().Set("Content-Disposition", "attachment; " + "filename*=UTF-8''" + meta.Name)
 		w.Header().Set("Content-Type", meta.Mime)
 
-		_, err = io.Copy(w, stream)
+		err = h.ctrl.ReadFileStream(req.Context(), id, w)
 		if err != nil {
-			h.logger.Error().Err(err).Msg("failed to write file to output")
+			h.logger.Error().Err(err).Msg("failed to read file stream")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -350,4 +344,47 @@ func (h handlers) GetHead(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handlers) Delete(w http.ResponseWriter, req *http.Request) {
+	err := req.ParseForm()
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to parse form")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	token := req.FormValue("token")
+	if token == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeNoToken,
+				Text: "no token",
+			},
+		})
+		return
+	}
+
+	_, err = h.gateway.Auth(req.Context(), token)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to auth")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	id := req.PathValue("id")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = h.ctrl.Delete(req.Context(), id)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to delete")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	response := json.RawMessage([]byte(fmt.Sprintf(`{"%s": true}`, id)))
+	json.NewEncoder(w).Encode(server.ServerResponse{
+		Response: response,
+	})
 }
