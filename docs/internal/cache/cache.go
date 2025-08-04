@@ -42,6 +42,8 @@ func (c *Cache) Set(owner string, meta *docs.Meta) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	c.log.Log().Str("owner", owner).Str("id", meta.ID).Msg("cache doc")
+
 	logins, ok := c.idToLogin[meta.ID]
 	if !ok {
 		logins = make([]string, 0)
@@ -72,13 +74,18 @@ func (c *Cache) Get(id, login string) (meta *docs.Meta) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	c.log.Log().Str("id", id).Str("login", login).Msg("search doc in cache")
+
 	for _, metas := range c.loginToMeta {
 		for _, meta := range metas {
 			if meta.ID == id {
+				c.log.Log().Str("id", id).Msg("cache hit")
 				return meta
 			}
 		}
 	}
+
+	c.log.Log().Str("id", id).Msg("cache miss")
 
 	return nil
 }
@@ -86,6 +93,8 @@ func (c *Cache) Get(id, login string) (meta *docs.Meta) {
 func (c *Cache) Remove(id string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	c.log.Log().Str("id", id).Msg("remove from cache")
 
 	logins, ok := c.idToLogin[id]
 	if !ok {
@@ -133,6 +142,8 @@ func (c *Cache) Remove(id string) {
 func (c *Cache) List(owner, key string, value interface{}, limit int) (list []*docs.Meta) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	c.log.Log().Str("owner", owner).Str("key", key).Any("value", value).Int("limit", limit).Msg("cache list docs")
 
 	list = make([]*docs.Meta, 0)
 	metas, ok := c.loginToMeta[owner]
@@ -185,6 +196,8 @@ func (c *Cache) List(owner, key string, value interface{}, limit int) (list []*d
 		}
 	}
 
+	c.log.Log().Int("len(list)", len(list)).Msg("docs found in cache")
+
 	sort.Sort(TsSorted(list))
 
 	if len(list) > limit {
@@ -197,6 +210,8 @@ func (c *Cache) List(owner, key string, value interface{}, limit int) (list []*d
 func (c *Cache) Free(owner string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	c.log.Log().Str("owner", owner).Msg("free cache")
 
 	metas, ok := c.loginToMeta[owner]
 	if !ok {
