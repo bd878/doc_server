@@ -414,12 +414,12 @@ func (h handlers) GetHead(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if meta.File {
-		w.Header().Set("Content-Disposition", "attachment; " + "filename*=UTF-8''" + meta.Name)
 		w.Header().Set("Content-Type", meta.Mime)
 	}
 
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", meta.Size))
 	w.Header().Set("Date", meta.Created)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h handlers) Delete(w http.ResponseWriter, req *http.Request) {
