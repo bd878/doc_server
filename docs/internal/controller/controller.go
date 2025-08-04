@@ -61,8 +61,8 @@ func (c Controller) List(ctx context.Context, owner, login, key, value string, l
 		val = value
 	}
 
-	if owner != "" {
-		docs = c.cache.List(owner, key, val, limit)
+	if login != "" {
+		docs = c.cache.List(login, key, val, limit)
 	} else {
 		docs = c.cache.List(login, key, val, limit)
 	}

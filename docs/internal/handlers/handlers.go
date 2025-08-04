@@ -93,7 +93,13 @@ func (h handlers) Save(w http.ResponseWriter, req *http.Request) {
 	login, err := h.gateway.Auth(req.Context(), meta.Token)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to auth")
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeNoUser,
+				Text: "not authorized",
+			},
+		})
 		return
 	}
 
@@ -181,7 +187,13 @@ func (h handlers) List(w http.ResponseWriter, req *http.Request) {
 	owner, err := h.gateway.Auth(req.Context(), token)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to auth")
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeNoUser,
+				Text: "not authorized",
+			},
+		})
 		return
 	}
 
@@ -288,7 +300,13 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 	login, err := h.gateway.Auth(req.Context(), token)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to auth")
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeNoUser,
+				Text: "not authorized",
+			},
+		})
 		return
 	}
 
@@ -366,7 +384,13 @@ func (h handlers) Delete(w http.ResponseWriter, req *http.Request) {
 	_, err = h.gateway.Auth(req.Context(), token)
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to auth")
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeNoUser,
+				Text: "not authorized",
+			},
+		})
 		return
 	}
 
