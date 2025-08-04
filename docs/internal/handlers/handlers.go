@@ -336,6 +336,8 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 	if meta.File {
 		w.Header().Set("Content-Disposition", "attachment; " + "filename*=UTF-8''" + meta.Name)
 		w.Header().Set("Content-Type", meta.Mime)
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", meta.Size))
+		w.Header().Set("Date", meta.Created)
 
 		err = h.ctrl.ReadFileStream(req.Context(), meta.Oid, w)
 		if err != nil {
@@ -344,6 +346,9 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	} else {
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", meta.Size))
+		w.Header().Set("Date", meta.Created)
+
 		jsonData, err := h.ctrl.ReadJSON(req.Context(), id)
 		if err != nil {
 			h.logger.Error().Err(err).Msg("failed to read json data")

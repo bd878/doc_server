@@ -102,6 +102,7 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 
 	meta.Ts = created.UnixNano()
 	meta.Created = created.Format(time.DateTime)
+	meta.Size = size
 
 	return
 }
