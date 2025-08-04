@@ -12,6 +12,7 @@ type (
 		Public    bool              `json:"public"`
 		Created   string            `json:"created"`
 		Ts        int64             `json:"-"`
+		Size      int               `json:"-"`
 		Grant     []string          `json:"grant"`
 	}
 

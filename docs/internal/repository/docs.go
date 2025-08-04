@@ -30,7 +30,7 @@ func New(log zerolog.Logger, tableName string, pool *pgxpool.Pool) *Repository {
 }
 
 func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, jsonData []byte, meta *docs.Meta) (err error) {
-	const query = "INSERT INTO %s(id, oid, name, file, json, public, mime, owner_login, grant_logins) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+	const query = "INSERT INTO %s(id, oid, name, file, json, public, mime, owner_login, grant_logins, size) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
 	const createdAtQuery = "SELECT created_at FROM %s WHERE id = $1"
 
 	var tx pgx.Tx
@@ -53,6 +53,7 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 	}()
 
 	var oid uint32
+	var size int64
 	if meta.File && f != nil {
 		lb := tx.LargeObjects()
 		oid, err = lb.Create(ctx, 0)
@@ -67,10 +68,12 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 		}
 		defer object.Close()
 
-		_, err = io.Copy(object, f)
+		size, err = io.Copy(object, f)
 		if err != nil {
 			return err
 		}
+	} else {
+		size = int64(len(jsonData))
 	}
 
 	grant, err := json.Marshal(meta.Grant)
@@ -80,12 +83,12 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 
 	// no file, only json
 	if oid == 0 {
-		_, err = tx.Exec(ctx, r.table(query), meta.ID, nil, meta.Name, false, jsonData, meta.Public, meta.Mime, owner, grant)
+		_, err = tx.Exec(ctx, r.table(query), meta.ID, nil, meta.Name, false, jsonData, meta.Public, meta.Mime, owner, grant, size)
 		if err != nil {
 			return
 		}
 	} else {
-		_, err = tx.Exec(ctx, r.table(query), meta.ID, oid, meta.Name, true, jsonData, meta.Public, meta.Mime, owner, grant)
+		_, err = tx.Exec(ctx, r.table(query), meta.ID, oid, meta.Name, true, jsonData, meta.Public, meta.Mime, owner, grant, size)
 		if err != nil {
 			return
 		}
@@ -104,8 +107,8 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 }
 
 func (r *Repository) List(ctx context.Context, owner, login, key string, value interface{}, limit int) (list []*docs.Meta, err error) {
-	const queryLogin = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE %s = $2 AND login = $1 ORDER BY created_at DESC LIMIT $3"
-	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s WHERE %s = $2 AND owner_login = $1 ORDER BY created_at DESC LIMIT $3"
+	const queryLogin = "SELECT id, oid, name, file, public, mime, created_at, grant_logins, size FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE %s = $2 AND login = $1 ORDER BY created_at DESC LIMIT $3"
+	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins, size FROM %s WHERE %s = $2 AND owner_login = $1 ORDER BY created_at DESC LIMIT $3"
 
 	r.log.Log().Str("owner", owner).Str("login", login).Str("key", key).Any("value", value).Int("limit", limit).Msg("list docs")
 
@@ -132,7 +135,7 @@ func (r *Repository) List(ctx context.Context, owner, login, key string, value i
 		var created time.Time
 		var oid *uint32
 
-		err = rows.Scan(&meta.ID, &oid, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
+		err = rows.Scan(&meta.ID, &oid, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant, &meta.Size)
 		if err != nil {
 			return
 		}
@@ -162,7 +165,7 @@ func (r *Repository) List(ctx context.Context, owner, login, key string, value i
 }
 
 func (r *Repository) GetMeta(ctx context.Context, id, login string) (meta *docs.Meta, err error) {
-	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE id = $1 AND (login = $2 OR owner_login = $2)"
+	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins, size FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE id = $1 AND (login = $2 OR owner_login = $2)"
 
 	r.log.Log().Str("id", id).Msg("get meta")
 
@@ -172,7 +175,7 @@ func (r *Repository) GetMeta(ctx context.Context, id, login string) (meta *docs.
 
 	meta = &docs.Meta{}
 
-	err = r.pool.QueryRow(ctx, r.table(query), id, login).Scan(&meta.ID, &oid, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant)
+	err = r.pool.QueryRow(ctx, r.table(query), id, login).Scan(&meta.ID, &oid, &meta.Name, &meta.File, &meta.Public, &meta.Mime, &created, &grant, &meta.Size)
 	if err != nil {
 		if errors.Is(pgx.ErrNoRows, err) {
 			err = docs.ErrNoDoc

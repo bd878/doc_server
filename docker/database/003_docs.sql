@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS docs.meta
 	public             bool NOT NULL DEFAULT false,
 	mime               varchar(256) NOT NULL,
 	owner_login        varchar(256) NOT NULL,
+	size               bigint NOT NULL,
 	created_at         timestamptz NOT NULL DEFAULT NOW(),
 	updated_at         timestamptz NOT NULL DEFAULT NOW(),
 	grant_logins       jsonb DEFAULT NULL,

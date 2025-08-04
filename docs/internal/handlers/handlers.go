@@ -359,6 +359,62 @@ func (h handlers) Get(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h handlers) GetHead(w http.ResponseWriter, req *http.Request) {
+	err := req.ParseForm()
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to parse form")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	token := req.FormValue("token")
+	if token == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: server.CodeNoToken,
+				Text: "no token",
+			},
+		})
+		return
+	}
+
+	login, err := h.gateway.Auth(req.Context(), token)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to auth")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if login == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	id := req.PathValue("id")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	meta, err := h.ctrl.GetMeta(req.Context(), id, login)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(server.ServerResponse{
+			Error: &server.ErrorCode{
+				Code: docs.CodeDocNotFound,
+				Text: "document not found",
+			},
+		})
+		return
+	}
+
+	if meta.File {
+		w.Header().Set("Content-Disposition", "attachment; " + "filename*=UTF-8''" + meta.Name)
+		w.Header().Set("Content-Type", meta.Mime)
+	}
+
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", meta.Size))
+	w.Header().Set("Date", meta.Created)
 }
 
 func (h handlers) Delete(w http.ResponseWriter, req *http.Request) {
