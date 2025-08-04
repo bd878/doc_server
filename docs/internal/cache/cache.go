@@ -2,6 +2,7 @@ package cache
 
 import (
 	"sync"
+	"sort"
 	"github.com/rs/zerolog"
 	docs "github.com/bd878/doc_server/docs/pkg/model"
 )
@@ -11,6 +12,22 @@ type Cache struct {
 	log            zerolog.Logger
 	idToLogin      map[string][]string
 	loginToMeta    map[string][]*docs.Meta
+}
+
+type TsSorted []*docs.Meta
+
+var _ sort.Interface  = (*TsSorted)(nil)
+
+func (t TsSorted) Len() int {
+	return len(t)
+}
+
+func (t TsSorted) Less(i, j int) bool {
+	return t[i].Ts < t[j].Ts
+}
+
+func (t TsSorted) Swap(i, j int) {
+	t[i], t[j] = t[j], t[i]
 }
 
 func New(log zerolog.Logger) *Cache {
@@ -113,14 +130,68 @@ func (c *Cache) Remove(id string) {
 	delete(c.idToLogin, id)
 }
 
-func (c *Cache) ListOwner(owner, key, value string, limit int) (docs []*docs.Meta) {
-	// not implemented
-	return nil
-}
+func (c *Cache) List(owner, key string, value interface{}, limit int) (list []*docs.Meta) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
-func (c *Cache) ListLogin(login, key, value string, limit int) (docs []*docs.Meta) {
-	// not implemented
-	return nil
+	list = make([]*docs.Meta, 0)
+	metas, ok := c.loginToMeta[owner]
+	if !ok {
+		return nil
+	}
+
+	for _, meta := range metas {
+		switch key {
+		case "name":
+			name, ok := value.(string)
+			if !ok {
+				return nil
+			}
+			if meta.Name == name {
+				list = append(list, meta)
+			}
+		case "file":
+			file, ok := value.(bool)
+			if !ok {
+				return nil
+			}
+			if meta.File == file {
+				list = append(list, meta)
+			}
+		case "mime":
+			mime, ok := value.(string)
+			if !ok {
+				return nil
+			}
+			if meta.Mime == mime {
+				list = append(list, meta)
+			}
+		case "public":
+			public, ok := value.(bool)
+			if !ok {
+				return nil
+			}
+			if meta.Public == public {
+				list = append(list, meta)
+			}
+		case "created":
+			created, ok := value.(string)
+			if !ok {
+				return nil
+			}
+			if meta.Created == created {
+				list = append(list, meta)
+			}
+		}
+	}
+
+	sort.Sort(TsSorted(list))
+
+	if len(list) > limit {
+		list = list[:limit]
+	}
+
+	return
 }
 
 func (c *Cache) Free(owner string) {

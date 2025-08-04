@@ -103,11 +103,11 @@ func (r *Repository) Save(ctx context.Context, owner string, f multipart.File, j
 	return
 }
 
-func (r *Repository) List(ctx context.Context, owner, login, key, value string, limit int) (list []*docs.Meta, err error) {
+func (r *Repository) List(ctx context.Context, owner, login, key string, value interface{}, limit int) (list []*docs.Meta, err error) {
 	const queryLogin = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s, jsonb_array_elements_text(grant_logins) AS login WHERE %s = $2 AND login = $1 ORDER BY created_at DESC LIMIT $3"
 	const query = "SELECT id, oid, name, file, public, mime, created_at, grant_logins FROM %s WHERE %s = $2 AND owner_login = $1 ORDER BY created_at DESC LIMIT $3"
 
-	r.log.Log().Str("owner", owner).Str("login", login).Str("key", key).Str("value", value).Int("limit", limit).Msg("list docs")
+	r.log.Log().Str("owner", owner).Str("login", login).Str("key", key).Any("value", value).Int("limit", limit).Msg("list docs")
 
 	var rows pgx.Rows
 	if login == "" {
